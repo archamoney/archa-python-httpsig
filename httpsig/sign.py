@@ -5,6 +5,8 @@ import six
 from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
+
+from .settings import DEFAULT_HEADER
 from .sign_algorithms import SignAlgorithm
 from .utils import *
 
@@ -25,8 +27,8 @@ class Signer(object):
 
         assert algorithm in ALGORITHMS, "Unknown algorithm"
 
-        if sign_algorithm is not None and not issubclass(type(sign_algorithm), SignAlgorithm):
-            raise HttpSigException("Unsupported digital signature algorithm")
+        # if sign_algorithm is not None and not issubclass(type(sign_algorithm), SignAlgorithm):
+        #     raise HttpSigException("Unsupported digital signature algorithm")
 
         if algorithm != DEFAULT_ALGORITHM:
             print("Algorithm: {} is deprecated please update to {}".format(algorithm, DEFAULT_ALGORITHM))
@@ -45,7 +47,10 @@ class Signer(object):
             self.sign_algorithm, self.hash_algorithm = algorithm.split('-')
         elif algorithm == "hs2019":
             assert sign_algorithm is not None, "Required digital signature algorithm not specified"
-            self.sign_algorithm = sign_algorithm
+            if "-" in sign_algorithm:
+                self.sign_algorithm, self.hash_algorithm = sign_algorithm.split('-')
+            else:
+                self.sign_algorithm = sign_algorithm
 
         if self.sign_algorithm == 'rsa':
             try:
@@ -106,7 +111,8 @@ class HeaderSigner(Signer):
        'authorization'.
     """
 
-    def __init__(self, key_id, secret, algorithm=None, sign_algorithm=None, headers=None, sign_header='authorization'):
+    def __init__(self, key_id, secret, algorithm=None, sign_algorithm=None, headers=None, sign_header='authorization',
+                 created=None):
         if algorithm is None:
             algorithm = DEFAULT_ALGORITHM
         if not key_id:
@@ -122,9 +128,9 @@ class HeaderSigner(Signer):
             raise ValueError("secret cant be larger than 100000 chars")
 
         super(HeaderSigner, self).__init__(secret=secret, algorithm=algorithm, sign_algorithm=sign_algorithm)
-        self.headers = headers or ['date']
+        self.headers = headers or [DEFAULT_HEADER]
         self.signature_template = build_signature_template(
-            key_id, algorithm, headers, sign_header)
+            key_id, algorithm, headers, sign_header, created=created)
         self.sign_header = sign_header
 
     def sign(self, headers, host=None, method=None, path=None):
@@ -138,7 +144,7 @@ class HeaderSigner(Signer):
         `path` is the HTTP path (required when using '(request-target)').
         """
         headers = CaseInsensitiveDict(headers)
-        required_headers = self.headers or ['date']
+        required_headers = self.headers or [DEFAULT_HEADER]
         signable = generate_message(
             required_headers, headers, host, method, path)
 

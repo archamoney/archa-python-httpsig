@@ -60,7 +60,7 @@ class HeaderVerifier(Verifier):
         :param secret:              The HMAC secret or RSA *public* key.
         :param required_headers:    Optional. A list of headers required to
             be present to validate, even if the signature is otherwise valid.
-            Defaults to ['date'].
+            Defaults to ['(created)'].
         :param method:              Optional. The HTTP method used in the
             request (eg. "GET"). Required for the '(request-target)' header.
         :param path:                Optional. The HTTP path requested,
@@ -80,7 +80,7 @@ class HeaderVerifier(Verifier):
         if len(secret) > 100000:
             raise ValueError("secret cant be larger than 100000 chars")
 
-        required_headers = required_headers or ['date']
+        required_headers = required_headers or ['(created)']
         self.headers = CaseInsensitiveDict(headers)
 
         if sign_header.lower() == 'authorization':
@@ -115,7 +115,7 @@ class HeaderVerifier(Verifier):
                     self.auth_dict['algorithm'], self.derived_algorithm))
             return False
 
-        auth_headers = self.auth_dict.get('headers', 'date').split(' ')
+        auth_headers = self.auth_dict.get('headers', '(created)').split(' ')
 
         if len(set(self.required_headers) - set(auth_headers)) > 0:
             error_headers = ', '.join(

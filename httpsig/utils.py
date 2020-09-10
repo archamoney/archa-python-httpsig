@@ -4,6 +4,8 @@ import re
 import struct
 import hashlib
 
+from httpsig.settings import DEFAULT_HEADER
+
 try:
     # Python 3
     from urllib.request import parse_http_list
@@ -58,7 +60,7 @@ def generate_message(required_headers, headers, host=None, method=None,
     headers = CaseInsensitiveDict(headers)
 
     if not required_headers:
-        required_headers = ['date']
+        required_headers = DEFAULT_HEADER
 
     signable_list = []
     for h in required_headers:
@@ -129,7 +131,7 @@ def parse_authorization_header(header):
     return (auth[0], values)
 
 
-def build_signature_template(key_id, algorithm, headers, sign_header='authorization'):
+def build_signature_template(key_id, algorithm, headers, sign_header='authorization', created=None):
     """
     Build the Signature template for use with the Authorization header.
 
@@ -143,6 +145,8 @@ def build_signature_template(key_id, algorithm, headers, sign_header='authorizat
     param_map = {'keyId': key_id,
                  'algorithm': algorithm,
                  'signature': '%s'}
+    if created:
+        param_map['created'] = created
     if headers:
         headers = [h.lower() for h in headers]
         param_map['headers'] = ' '.join(headers)
