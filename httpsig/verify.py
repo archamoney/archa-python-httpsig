@@ -45,6 +45,7 @@ class Verifier(Signer):
             raise HttpSigException("Unsupported algorithm.")
 
 
+
 class HeaderVerifier(Verifier):
     """
     Verifies an HTTP signature from given headers.
