@@ -7,7 +7,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
 from .settings import DEFAULT_HEADER
-from .sign_algorithms import SignAlgorithm
+from .sign_algorithms import SignAlgorithm, HMACSigned
 from .utils import *
 
 DEFAULT_ALGORITHM = "hs2019"
@@ -26,9 +26,13 @@ class Signer(object):
             algorithm = DEFAULT_ALGORITHM
 
         assert algorithm in ALGORITHMS, "Unknown algorithm"
+        # TODO this needs to updated if the we are moving the logic to sign and verify methods to SignAlgorithm
+        check_sign_algorithm = sign_algorithm
+        if '-' in check_sign_algorithm and 'hmac' in check_sign_algorithm :
+            check_sign_algorithm = HMACSigned()
 
-        # if sign_algorithm is not None and not issubclass(type(sign_algorithm), SignAlgorithm):
-        #     raise HttpSigException("Unsupported digital signature algorithm")
+        if sign_algorithm is not None and not issubclass(type(check_sign_algorithm), SignAlgorithm):
+            raise HttpSigException("Unsupported digital signature algorithm")
 
         if algorithm != DEFAULT_ALGORITHM:
             print("Algorithm: {} is deprecated please update to {}".format(algorithm, DEFAULT_ALGORITHM))
