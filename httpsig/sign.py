@@ -21,7 +21,7 @@ class Signer(object):
     Password-protected keyfiles are not supported.
     """
 
-    def __init__(self, secret, algorithm=None, sign_algorithm=None):
+    def __init__(self, secret, algorithm=None, sign_algorithm=None, created=None):
         if algorithm is None:
             algorithm = DEFAULT_ALGORITHM
 
@@ -46,7 +46,7 @@ class Signer(object):
         self._hash = None
         self.algorithm = algorithm
         self.secret = secret
-
+        self.created=created
         if "-" in algorithm:
             self.sign_algorithm, self.hash_algorithm = algorithm.split('-')
         elif algorithm == "hs2019":
@@ -130,14 +130,15 @@ class HeaderSigner(Signer):
 
         if len(secret) > 100000:
             raise ValueError("secret cant be larger than 100000 chars")
-
-        super(HeaderSigner, self).__init__(secret=secret, algorithm=algorithm, sign_algorithm=sign_algorithm)
+        self.created = created
+        super(HeaderSigner, self).__init__(secret=secret, algorithm=algorithm, sign_algorithm=sign_algorithm,
+                                           created=created)
         self.headers = headers or [DEFAULT_HEADER]
         self.signature_template = build_signature_template(
-            key_id, algorithm, headers, sign_header, created=created)
+            key_id, algorithm, headers, sign_header, created=self)
         self.sign_header = sign_header
 
-    def sign(self, headers, host=None, method=None, path=None, created=None):
+    def sign(self, headers, host=None, method=None, path=None):
         """
         Add Signature Authorization header to case-insensitive header dict.
 
@@ -150,7 +151,7 @@ class HeaderSigner(Signer):
         headers = CaseInsensitiveDict(headers)
         required_headers = self.headers or [DEFAULT_HEADER]
         signable = generate_message(
-            required_headers, headers, host, method, path, created=created)
+            required_headers, headers, host, method, path, created=self.created)
 
         signature = super(HeaderSigner, self).sign(signable)
         headers[self.sign_header] = self.signature_template % signature
