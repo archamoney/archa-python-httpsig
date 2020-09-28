@@ -135,7 +135,7 @@ class HeaderSigner(Signer):
                                            created=created)
         self.headers = headers or [DEFAULT_HEADER]
         self.signature_template = build_signature_template(
-            key_id, algorithm, headers, sign_header, created=self)
+            key_id, algorithm, headers, sign_header, created=self.created)
         self.sign_header = sign_header
 
     def sign(self, headers, host=None, method=None, path=None):
