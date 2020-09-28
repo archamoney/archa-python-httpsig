@@ -137,7 +137,7 @@ class HeaderSigner(Signer):
             key_id, algorithm, headers, sign_header, created=created)
         self.sign_header = sign_header
 
-    def sign(self, headers, host=None, method=None, path=None):
+    def sign(self, headers, host=None, method=None, path=None, created=None):
         """
         Add Signature Authorization header to case-insensitive header dict.
 
@@ -150,7 +150,7 @@ class HeaderSigner(Signer):
         headers = CaseInsensitiveDict(headers)
         required_headers = self.headers or [DEFAULT_HEADER]
         signable = generate_message(
-            required_headers, headers, host, method, path)
+            required_headers, headers, host, method, path, created=created)
 
         signature = super(HeaderSigner, self).sign(signable)
         headers[self.sign_header] = self.signature_template % signature

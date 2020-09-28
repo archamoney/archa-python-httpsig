@@ -45,14 +45,14 @@ class Verifier(Signer):
             raise HttpSigException("Unsupported algorithm.")
 
 
-
 class HeaderVerifier(Verifier):
     """
     Verifies an HTTP signature from given headers.
     """
 
     def __init__(self, headers, secret, required_headers=None, method=None,
-                 path=None, host=None, sign_header='authorization', algorithm=None, sign_algorithm=None):
+                 path=None, host=None, sign_header='authorization', algorithm=None, sign_algorithm=None,
+                 created=None):
         """
         Instantiate a HeaderVerifier object.
 
@@ -83,7 +83,7 @@ class HeaderVerifier(Verifier):
 
         required_headers = required_headers or ['(created)']
         self.headers = CaseInsensitiveDict(headers)
-
+        self.created = created
         if sign_header.lower() == 'authorization':
             auth = parse_authorization_header(self.headers['authorization'])
             if len(auth) == 2:
@@ -111,8 +111,10 @@ class HeaderVerifier(Verifier):
             not found in the signature.
         Returns True or False.
         """
-        if 'algorithm' in self.auth_dict and self.derived_algorithm is not None and self.auth_dict['algorithm'] != self.derived_algorithm:
-            print("Algorithm mismatch, signature parameter algorithm was: {}, but algorithm derived from key is: {}".format(
+        if 'algorithm' in self.auth_dict and self.derived_algorithm is not None and self.auth_dict[
+            'algorithm'] != self.derived_algorithm:
+            print(
+                "Algorithm mismatch, signature parameter algorithm was: {}, but algorithm derived from key is: {}".format(
                     self.auth_dict['algorithm'], self.derived_algorithm))
             return False
 
@@ -120,11 +122,11 @@ class HeaderVerifier(Verifier):
 
         if len(set(self.required_headers) - set(auth_headers)) > 0:
             error_headers = ', '.join(
-                    set(self.required_headers) - set(auth_headers))
+                set(self.required_headers) - set(auth_headers))
             raise ValueError(
-                    '{} is a required header(s)'.format(error_headers))
+                '{} is a required header(s)'.format(error_headers))
 
         signing_str = generate_message(
-                auth_headers, self.headers, self.host, self.method, self.path)
+            auth_headers, self.headers, self.host, self.method, self.path, created=self.created)
 
         return self._verify(signing_str, self.auth_dict['signature'])
