@@ -83,7 +83,7 @@ class HeaderVerifier(Verifier):
 
         required_headers = required_headers or ['(created)']
         self.headers = CaseInsensitiveDict(headers)
-        self.created = created
+
         if sign_header.lower() == 'authorization':
             auth = parse_authorization_header(self.headers['authorization'])
             if len(auth) == 2:
@@ -98,9 +98,9 @@ class HeaderVerifier(Verifier):
         self.path = path
         self.host = host
         self.derived_algorithm = algorithm
-
+        self.created = created
         super(HeaderVerifier, self).__init__(
-            secret, algorithm=self.auth_dict['algorithm'], sign_algorithm=sign_algorithm)
+            secret, algorithm=self.auth_dict['algorithm'], sign_algorithm=sign_algorithm, created=created)
 
     def verify(self):
         """
