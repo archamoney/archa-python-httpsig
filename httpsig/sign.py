@@ -1,12 +1,10 @@
 from __future__ import print_function
-import base64
-import six
+
 
 from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
-from .settings import DEFAULT_HEADER
 from .sign_algorithms import SignAlgorithm, HMACSigned
 from .utils import *
 
@@ -28,9 +26,8 @@ class Signer(object):
         assert algorithm in ALGORITHMS, "Unknown algorithm"
         # TODO this needs to updated if the we are moving the logic to sign and verify methods to SignAlgorithm
         check_sign_algorithm = sign_algorithm
-        if '-' in check_sign_algorithm and 'hmac' in check_sign_algorithm :
+        if '-' in check_sign_algorithm and 'hmac' in check_sign_algorithm:
             check_sign_algorithm = HMACSigned()
-
         if sign_algorithm is not None and not issubclass(type(check_sign_algorithm), SignAlgorithm):
             raise HttpSigException("Unsupported digital signature algorithm")
 
@@ -46,7 +43,7 @@ class Signer(object):
         self._hash = None
         self.algorithm = algorithm
         self.secret = secret
-        self.created=created
+        self.created = created
         if "-" in algorithm:
             self.sign_algorithm, self.hash_algorithm = algorithm.split('-')
         elif algorithm == "hs2019":
