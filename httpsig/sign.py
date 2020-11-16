@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from datetime import datetime, timezone
 
 from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
@@ -19,7 +20,7 @@ class Signer(object):
     Password-protected keyfiles are not supported.
     """
 
-    def __init__(self, secret, algorithm=None, sign_algorithm=None, created=None):
+    def __init__(self, secret, algorithm=None, sign_algorithm=None):
         if algorithm is None:
             algorithm = DEFAULT_ALGORITHM
 
@@ -43,7 +44,6 @@ class Signer(object):
         self._hash = None
         self.algorithm = algorithm
         self.secret = secret
-        self.created = created
         if "-" in algorithm:
             self.sign_algorithm, self.hash_algorithm = algorithm.split('-')
         elif algorithm == "hs2019":
@@ -112,8 +112,7 @@ class HeaderSigner(Signer):
        'authorization'.
     """
 
-    def __init__(self, key_id, secret, algorithm=None, sign_algorithm=None, headers=None, sign_header='authorization',
-                 created=None):
+    def __init__(self, key_id, secret, algorithm=None, sign_algorithm=None, headers=None, sign_header='authorization'):
         if algorithm is None:
             algorithm = DEFAULT_ALGORITHM
         if not key_id:
@@ -127,15 +126,13 @@ class HeaderSigner(Signer):
 
         if len(secret) > 100000:
             raise ValueError("secret cant be larger than 100000 chars")
-        self.created = created
-        super(HeaderSigner, self).__init__(secret=secret, algorithm=algorithm, sign_algorithm=sign_algorithm,
-                                           created=created)
+        super(HeaderSigner, self).__init__(secret=secret, algorithm=algorithm, sign_algorithm=sign_algorithm)
         self.headers = headers or [DEFAULT_HEADER]
         self.signature_template = build_signature_template(
-            key_id, algorithm, headers, sign_header, created=self.created)
+            key_id, algorithm, self.headers, sign_header)
         self.sign_header = sign_header
 
-    def sign(self, headers, host=None, method=None, path=None):
+    def sign(self, headers, host=None, method=None, path=None, created=datetime.now(timezone.utc)):
         """
         Add Signature Authorization header to case-insensitive header dict.
 
@@ -144,13 +141,18 @@ class HeaderSigner(Signer):
             headers).
         `method` is the HTTP method (required when using '(request-target)').
         `path` is the HTTP path (required when using '(request-target)').
+        `created` is a DateTime (required when using '(created)'). (Defaults to now())
         """
         headers = CaseInsensitiveDict(headers)
+
         required_headers = self.headers or [DEFAULT_HEADER]
+
+        timestamp = int(created.timestamp())
         signable = generate_message(
-            required_headers, headers, host, method, path, created=self.created)
+            required_headers, headers, host, method, path, created=timestamp)
 
         signature = super(HeaderSigner, self).sign(signable)
-        headers[self.sign_header] = self.signature_template % signature
+
+        headers[self.sign_header] = self.signature_template.format(signature=signature, created=timestamp)
 
         return headers

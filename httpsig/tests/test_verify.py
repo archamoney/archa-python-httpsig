@@ -48,8 +48,7 @@ class TestVerifyHMACSHA1(BaseTestCase):
         self.created = int((datetime.now(timezone.utc)).timestamp())
 
     def test_basic_sign(self):
-        signer = Signer(secret=self.sign_secret, algorithm=self.algorithm, sign_algorithm=self.sign_algorithm,
-                        created=self.created)
+        signer = Signer(secret=self.sign_secret, algorithm=self.algorithm, sign_algorithm=self.sign_algorithm)
         verifier = Verifier(
             secret=self.verify_secret, algorithm=self.algorithm, sign_algorithm=self.sign_algorithm)
 
@@ -62,17 +61,12 @@ class TestVerifyHMACSHA1(BaseTestCase):
         self.assertFalse(verifier._verify(data=BAD, signature=signature))
 
     def test_default(self):
-        unsigned = {
-            '(created)': self.created
-        }
-
         hs = HeaderSigner(
             key_id="Test", secret=self.sign_secret, algorithm=self.algorithm,
-            sign_header=self.sign_header, sign_algorithm=self.sign_algorithm, created=self.created)
-        signed = hs.sign(unsigned)
+            sign_header=self.sign_header, sign_algorithm=self.sign_algorithm)
+        signed = hs.sign(None)
         hv = HeaderVerifier(
-            headers=signed, secret=self.verify_secret, sign_header=self.sign_header, sign_algorithm=self.sign_algorithm,
-            created=self.created)
+            headers=signed, secret=self.verify_secret, sign_header=self.sign_header, sign_algorithm=self.sign_algorithm)
         self.assertTrue(hv.verify())
 
     def test_signed_headers(self):
@@ -92,11 +86,9 @@ class TestVerifyHMACSHA1(BaseTestCase):
                 'digest',
                 'content-length'
             ],
-            sign_algorithm=self.sign_algorithm,
-            created=self.created)
+            sign_algorithm=self.sign_algorithm)
         unsigned = {
             'Host': HOST,
-            '(created)': self.created,
             'Content-Type': self.header_content_type,
             'Digest': self.header_digest,
             'Content-Length': self.header_content_length,
@@ -107,7 +99,7 @@ class TestVerifyHMACSHA1(BaseTestCase):
         hv = HeaderVerifier(
             headers=signed, secret=self.verify_secret,
             host=HOST, method=METHOD, path=PATH,
-            sign_header=self.sign_header, sign_algorithm=self.sign_algorithm, created=self.created)
+            sign_header=self.sign_header, sign_algorithm=self.sign_algorithm)
         self.assertTrue(hv.verify())
 
     def test_incorrect_headers(self):

@@ -135,7 +135,7 @@ def parse_authorization_header(header):
     return (auth[0], values)
 
 
-def build_signature_template(key_id, algorithm, headers, sign_header='authorization', created=None):
+def build_signature_template(key_id, algorithm, headers, sign_header='authorization'):
     """
     Build the Signature template for use with the Authorization header.
 
@@ -145,15 +145,23 @@ def build_signature_template(key_id, algorithm, headers, sign_header='authorizat
 
     The signature must be interpolated into the template to get the final
     Authorization header value.
+
+    Fields for interpolation are:
+        {signature} - the request signature
+        {created} - the request created time
     """
     param_map = {'keyId': key_id,
                  'algorithm': algorithm,
-                 'signature': '%s'}
-    if created:
-        param_map['created'] = created
+                 'signature': '{signature}'}
     if headers:
         headers = [h.lower() for h in headers]
         param_map['headers'] = ' '.join(headers)
+
+        # If our list of required headers includes the (created) pseudoheader, then include this
+        # (via string interpolation)
+        if '(created)' in headers:
+            param_map['created'] = '{created}'
+
     kv = map('{0[0]}="{0[1]}"'.format, param_map.items())
     kv_string = ','.join(kv)
     if sign_header.lower() == 'authorization':

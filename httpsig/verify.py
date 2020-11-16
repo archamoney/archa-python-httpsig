@@ -51,8 +51,7 @@ class HeaderVerifier(Verifier):
     """
 
     def __init__(self, headers, secret, required_headers=None, method=None,
-                 path=None, host=None, sign_header='authorization', algorithm=None, sign_algorithm=None,
-                 created=None):
+                 path=None, host=None, sign_header='authorization', algorithm=None, sign_algorithm=None):
         """
         Instantiate a HeaderVerifier object.
 
@@ -98,9 +97,8 @@ class HeaderVerifier(Verifier):
         self.path = path
         self.host = host
         self.derived_algorithm = algorithm
-        self.created = created
         super(HeaderVerifier, self).__init__(
-            secret, algorithm=self.auth_dict['algorithm'], sign_algorithm=sign_algorithm, created=created)
+            secret, algorithm=self.auth_dict['algorithm'], sign_algorithm=sign_algorithm)
 
     def verify(self):
         """
@@ -126,7 +124,9 @@ class HeaderVerifier(Verifier):
             raise ValueError(
                 '{} is a required header(s)'.format(error_headers))
 
+        created = self.auth_dict.get('created', None)
+
         signing_str = generate_message(
-            auth_headers, self.headers, self.host, self.method, self.path, created=self.created)
+            auth_headers, self.headers, self.host, self.method, self.path, created=created)
 
         return self._verify(signing_str, self.auth_dict['signature'])
