@@ -132,7 +132,7 @@ class HeaderSigner(Signer):
             key_id, algorithm, self.headers, sign_header)
         self.sign_header = sign_header
 
-    def sign(self, headers, host=None, method=None, path=None, created=datetime.now(timezone.utc)):
+    def sign(self, headers, host=None, method=None, path=None, created=None):
         """
         Add Signature Authorization header to case-insensitive header dict.
 
@@ -146,8 +146,9 @@ class HeaderSigner(Signer):
         headers = CaseInsensitiveDict(headers)
 
         required_headers = self.headers or [DEFAULT_HEADER]
-
-        timestamp = int(created.timestamp())
+        timestamp = created
+        if timestamp is None:
+            timestamp = int(datetime.now(timezone.utc).timestamp())
         signable = generate_message(
             required_headers, headers, host, method, path, created=timestamp)
 
