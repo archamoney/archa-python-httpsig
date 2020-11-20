@@ -27,7 +27,7 @@ class Signer(object):
         assert algorithm in ALGORITHMS, "Unknown algorithm"
         # TODO this needs to updated if the we are moving the logic to sign and verify methods to SignAlgorithm
         check_sign_algorithm = sign_algorithm
-        if '-' in check_sign_algorithm and 'hmac' in check_sign_algorithm:
+        if isinstance(check_sign_algorithm, str) and '-' in check_sign_algorithm and 'hmac' in check_sign_algorithm:
             check_sign_algorithm = HMACSigned()
         if sign_algorithm is not None and not issubclass(type(check_sign_algorithm), SignAlgorithm):
             raise HttpSigException("Unsupported digital signature algorithm")
@@ -44,11 +44,11 @@ class Signer(object):
         self._hash = None
         self.algorithm = algorithm
         self.secret = secret
-        if "-" in algorithm:
+        if isinstance(algorithm, str) and "-" in algorithm:
             self.sign_algorithm, self.hash_algorithm = algorithm.split('-')
         elif algorithm == "hs2019":
             assert sign_algorithm is not None, "Required digital signature algorithm not specified"
-            if "-" in sign_algorithm:
+            if isinstance(sign_algorithm, str) and "-" in sign_algorithm:
                 self.sign_algorithm, self.hash_algorithm = sign_algorithm.split('-')
             else:
                 self.sign_algorithm = sign_algorithm
