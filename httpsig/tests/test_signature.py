@@ -3,9 +3,6 @@ import sys
 import os
 
 import unittest
-from datetime import datetime, timezone
-
-import pytest
 
 import httpsig.sign as sign
 from httpsig.sign_algorithms import PSS
@@ -154,14 +151,14 @@ class TestSign(unittest.TestCase):
         self.assertEqual(params['signature'], 'Fj7aYyirHvtcQcXrH5z+YYCHU4dA8j3SMimwM+3UHm3teNZD/Y+VmwtGf0lrMLTcM5qN10xt0PdsQ86QpRTwAO4XEIl8Pzn1JOmnFz/RH126M3A6GVftVhDpCE2v4OSCW/lcHPAh0WFG5ZLG9NmeRWEwJSpv0EoYv4SiTvPycyE=')  # noqa: E501
 
     def test_unsupported_hash_algorithm(self):
-        with pytest.raises(HttpSigException) as e:
+        with self.assertRaises(HttpSigException) as cm:
             sign.HeaderSigner(key_id='Test', secret=self.key_2048, sign_algorithm=PSS("sha123", salt_length=0))
-        self.assertEqual(str(e.value), "Unsupported hash algorithm")
+        self.assertEqual(str(cm.exception), "Unsupported hash algorithm")
 
     def test_deprecated_hash_algorithm(self):
-        with pytest.raises(HttpSigException) as e:
+        with self.assertRaises(HttpSigException) as cm:
             sign.HeaderSigner(key_id='Test', secret=self.key_2048, sign_algorithm=PSS("sha256", salt_length=0))
-        self.assertEqual(str(e.value), "Hash algorithm: sha256 is deprecated. Please use: sha512")
+        self.assertEqual(str(cm.exception), "Hash algorithm: sha256 is deprecated. Please use: sha512")
 
     def test_empty_secret(self):
         with self.assertRaises(ValueError) as e:
