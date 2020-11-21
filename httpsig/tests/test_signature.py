@@ -4,8 +4,6 @@ import os
 
 import unittest
 
-import pytest
-
 import httpsig.sign as sign
 from httpsig.sign_algorithms import PSS
 from httpsig.utils import parse_authorization_header, HttpSigException
@@ -40,7 +38,7 @@ class TestSign(unittest.TestCase):
         unsigned = {
             'Date': self.header_date
         }
-        signed = hs.sign(unsigned)
+        signed = hs.sign(unsigned, created=self.header_date)
         self.assertIn('Date', signed)
         self.assertEqual(unsigned['Date'], signed['Date'])
         self.assertIn('Authorization', signed)
@@ -51,14 +49,15 @@ class TestSign(unittest.TestCase):
         self.assertIn('signature', params)
         self.assertEqual(params['keyId'], 'Test')
         self.assertEqual(params['algorithm'], 'hs2019')
-        self.assertEqual(params['signature'], 'T8+Cj3Zp2cBDm2r8/loPgfHUSSFXXyZJNxxbNx1NvKVz/r5T4z6pVxhl9rqk8WfYHMdlh2aT5hCrYKvhs88Jy0DDmeUP4nELWRsO1BF0oAqHfcrbEikZQL7jA6z0guVaLr0S5QRGmd1K5HUEkP/vYEOns+FRL+JrFG4dNJNESvG5iyKUoaXfoZCFdqtzLlIteEAL7dW/kaX/dE116wfpbem1eCABuGopRhuFtjqLKVjuUVwyP/zSYTqd9j+gDhinkAifTJPxbGMh0b5LZdNCqw5irT9NkTcTFRXDp8ioX8r805Z9QhjT7H+rSo350U2LsAFoQ9ttryPBOoMPCiQTlw==')  # noqa: E501
+        self.assertEqual(params['signature'], 'OIBXItZkVQwd0uimd0TNJqyOtlXNKBPLe553wCbaGbYIQwuvybb6zqERRa1lWUy2055ABXrEdIkkyNSo/mem+74PsejRi55iByPkeiUzVN4oRNe78Gih08k6xRUReVEwuqj5QgmsZ2KlIBUHXvHXtwZFVJTwMntYlpG/YyITbP5qGcubPlQjB5ppCwI9w4+RZhWTrhkgI74K7k3COmqotY2XxofaMhqbEGEyAFw4fcvAODLlLZhHrXR23cBeAH837BBeepL3kXqLo47CFpWttA8VGDfFPrc3jemtwkONQhRtHR3UhJJyT2Vx0+NGdFPUR/MOm+aSkZFAz9w6LmfiOA==')  # noqa: E501
 
     def test_other_default(self):
+
         hs = sign.HeaderSigner(key_id='Test', secret=self.key_1024, sign_algorithm=PSS(hash_algorithm="sha512", salt_length=0))
         unsigned = {
             'Date': self.header_date
         }
-        signed = hs.sign(unsigned)
+        signed = hs.sign(unsigned, created=self.header_date)
         self.assertIn('Date', signed)
         self.assertEqual(unsigned['Date'], signed['Date'])
         self.assertIn('Authorization', signed)
@@ -70,20 +69,20 @@ class TestSign(unittest.TestCase):
         self.assertEqual(params['keyId'], 'Test')
         self.assertEqual(params['algorithm'], 'hs2019')
         self.assertEqual(params['signature'],
-                         'Gw8FOaXNxqwJHXwJ30OKiMFpK5zP916CFtzK7/biKi9NppjGAlpUfFKqp5kK+bFRyXxqUzQ1x5cbSeFzRWnqodNNO60ApYbOVD7ePqJfZ3DJFAxYOMzoECzc+lyVskSHKC0Ue8aYiV66gXTuY7hrEIqUsK3To/DhSNgO8csdzwg=')
+                         'jZb/d7fRF3ClpVYGK0737T9erwFwVtvyADouOPuk00X7me2q4DKroGxMYWYOJpn53rCgGq/XtY+j8I/ImezFCVYiNox0cqiMVS9Lt7cH21XXrmRfwlSPVYzjaXd8NLu4SBKAtB7nNQLsZDt3fH+pidK9tm6Ak3pcg6o0eUuUZNA=')
 
     def test_basic(self):
         hs = sign.HeaderSigner(key_id='Test', secret=self.key_2048, sign_algorithm=PSS(salt_length=0), headers=[
             '(request-target)',
             'host',
-            'date',
+            '(created)',
         ])
         unsigned = {
             'Host': self.header_host,
             'Date': self.header_date,
         }
         signed = hs.sign(
-            unsigned, method=self.test_method, path=self.test_path)
+            unsigned, method=self.test_method, path=self.test_path, created=self.header_date)
 
         self.assertIn('Date', signed)
         self.assertEqual(unsigned['Date'], signed['Date'])
@@ -96,14 +95,14 @@ class TestSign(unittest.TestCase):
         self.assertEqual(params['keyId'], 'Test')
         self.assertEqual(params['algorithm'], 'hs2019')
         self.assertEqual(
-            params['headers'], '(request-target) host date')
-        self.assertEqual(params['signature'], 'KkF4oeOJJH9TaYjQdaU634G7AVmM5Bf3fnfJCBZ7G0H5puW5XlQTpduA+TgouKOJhbv4aRRpunPzCHUxUjEvrR3TSALqW1EOsBwCVIusE9CnrhL7vUOvciIDai/jI15RsfR9+XyTmOSFbsI07E8mmywr3nLeWX6AAFDMO2vWc21zZxrSc13vFfAkVvFhXLxO4g0bBm6Z4m5/9ytWtdE0Gf3St2kY8aZTedllRCS8cMx8GVAIw/qYGeIlGKUCZKxrFxnviN7gfxixwova6lcxpppIo+WXxEiwMJfSQBlx0WGn3A3twCv6TsIxPOVUEW4jcogDh+jGFf1aGdVyHquTRQ==')  # noqa: E501
+            params['headers'], '(request-target) host (created)')
+        self.assertEqual(params['signature'], 'ItkDA2bm25g1FfaOsk81ddN/5YxIDovWxdNS1WuD6RztHk+jfRpnaqC7HyX932dFNdNEw8xYeCvy5Mc1We9491shw4VJA1e0+WBKXCT0TWoTsJ6Ti34Q07QLmAi4bBOtbkNo98yaGTSvSTluElbyEo+oPb1PH3Ab62wl340gjBync7xnTWnGivjRbQ+l+YyIREvzFoNnB+UruV3tDXgMs8YqyP6p5Of+XXOZKuJNk4Roi+3dX19vUSNrDUKPeadMSfZDVhwOiDx+cjlU894IhEkxpcOK5shhgZRqAwv4lZrG4O65WYUE7bxEbIaOpfvB+kE1xd+LGGNj2P2GALcmHg==')  # noqa: E501
 
     def test_all(self):
         hs = sign.HeaderSigner(key_id='Test', secret=self.key_2048, sign_algorithm=PSS("sha512", salt_length=0),  headers=[
             '(request-target)',
             'host',
-            'date',
+            '(created)',
             'content-type',
             'digest',
             'content-length'
@@ -116,7 +115,7 @@ class TestSign(unittest.TestCase):
             'Content-Length': self.header_content_length,
         }
         signed = hs.sign(
-            unsigned, method=self.test_method, path=self.test_path)
+            unsigned, method=self.test_method, path=self.test_path, created=self.header_date)
 
         self.assertIn('Date', signed)
         self.assertEqual(unsigned['Date'], signed['Date'])
@@ -130,15 +129,15 @@ class TestSign(unittest.TestCase):
         self.assertEqual(params['algorithm'], 'hs2019')
         self.assertEqual(
             params['headers'],
-            '(request-target) host date content-type digest content-length')
-        self.assertEqual(params['signature'], 'bxWyLDB/Tuhzxd/tWG2g60l3Goyk9XJZzj2ouNKizZuZoe1Ngj+19N11bhK7FABHJ7lSzH5g6fp5LkN894ivIv6N29L2sPssuAkqgzNXyvYkp4KWOr5j7sVpApmRH7gf7THljcXosmrYk5gdBTspixpJJJ5LGkkPKCRAFurmi/LqopSH6cJbLJNIccTu2dTMGEeDOqqNterVmfonpZyPeBsEEwoeOo6d8zgHzB/1Xxk7dfELFbA1c0LE5kZbwEIEFPmS01YFz6EJW7Aj8kzvzwQRyvgDobi25niGOy/D7JVHvtDjBIaJedFuFJSb8rZ2DGryBQ6NwchMp3f2MUoTGg==')  # noqa: E501
+            '(request-target) host (created) content-type digest content-length')
+        self.assertEqual(params['signature'], 'XLe15wakQd34/GXzWmFczhuwVelF/ZYiKv+VvIE+C/5M11Ls/zAsv3FE+oDjkX49h8q2fGUXcdVxheokJHD0MKiEFSLCDpH4jU9x+7sX7MMxDQ5Dgk2zDda5Y8LSDlteh6coBKspx11KJrU8oiB9BFoIPLiI7loBeea5F6Wfcp4taxOHo7Q6h/xsVvKzTeUW8Z/pYSECxq7YYkmcugP+jXyF72sroq/Fc/GVVWQTIyG8y3NqsW7FeSBfK3Zf+6inii+kAyUaxaa5ol5nmqUxSYCXUg/X4L+XSA3D7rfDag44I+qkIGPnL7wbzECSEeY2A2l2l4eXGSyqNchpdrgdIQ==')  # noqa: E501
 
     def test_default_deprecated_256(self):
         hs = sign.HeaderSigner(key_id='Test', secret=self.key_1024, algorithm="rsa-sha256")
         unsigned = {
             'Date': self.header_date
         }
-        signed = hs.sign(unsigned)
+        signed = hs.sign(unsigned, created=self.header_date)
         self.assertIn('Date', signed)
         self.assertEqual(unsigned['Date'], signed['Date'])
         self.assertIn('Authorization', signed)
@@ -149,17 +148,17 @@ class TestSign(unittest.TestCase):
         self.assertIn('signature', params)
         self.assertEqual(params['keyId'], 'Test')
         self.assertEqual(params['algorithm'], 'rsa-sha256')
-        self.assertEqual(params['signature'], 'jKyvPcxB4JbmYY4mByyBY7cZfNl4OW9HpFQlG7N4YcJPteKTu4MWCLyk+gIr0wDgqtLWf9NLpMAMimdfsH7FSWGfbMFSrsVTHNTk0rK3usrfFnti1dxsM4jl0kYJCKTGI/UWkqiaxwNiKqGcdlEDrTcUhhsFsOIo8VhddmZTZ8w=')  # noqa: E501
+        self.assertEqual(params['signature'], 'Fj7aYyirHvtcQcXrH5z+YYCHU4dA8j3SMimwM+3UHm3teNZD/Y+VmwtGf0lrMLTcM5qN10xt0PdsQ86QpRTwAO4XEIl8Pzn1JOmnFz/RH126M3A6GVftVhDpCE2v4OSCW/lcHPAh0WFG5ZLG9NmeRWEwJSpv0EoYv4SiTvPycyE=')  # noqa: E501
 
     def test_unsupported_hash_algorithm(self):
-        with pytest.raises(HttpSigException) as e:
+        with self.assertRaises(HttpSigException) as cm:
             sign.HeaderSigner(key_id='Test', secret=self.key_2048, sign_algorithm=PSS("sha123", salt_length=0))
-        self.assertEqual(str(e.value), "Unsupported hash algorithm")
+        self.assertEqual(str(cm.exception), "Unsupported hash algorithm")
 
     def test_deprecated_hash_algorithm(self):
-        with pytest.raises(HttpSigException) as e:
+        with self.assertRaises(HttpSigException) as cm:
             sign.HeaderSigner(key_id='Test', secret=self.key_2048, sign_algorithm=PSS("sha256", salt_length=0))
-        self.assertEqual(str(e.value), "Hash algorithm: sha256 is deprecated. Please use: sha512")
+        self.assertEqual(str(cm.exception), "Hash algorithm: sha256 is deprecated. Please use: sha512")
 
     def test_empty_secret(self):
         with self.assertRaises(ValueError) as e:

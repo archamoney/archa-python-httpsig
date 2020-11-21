@@ -20,7 +20,7 @@ See the original project_, original Python module_, original spec_, and `current
 Requirements
 ------------
 
-* Python 2.7, 3.4-3.7
+* Python 2.7, 3.4-3.8
 * PyCryptodome_
 
 Optional:
@@ -34,7 +34,7 @@ For testing:
 
 * tox
 * pyenv (optional, handy way to access multiple versions)
-    $ for VERS in 2.7.15 3.4.9 3.5.6 3.6.7 3.7.1; do pyenv install -s $VERS; done
+    $ for VERS in 2.7.15 3.4.9 3.5.6 3.6.7 3.7.1, 3.8.2,3.8.5; do pyenv install -s $VERS; done
 
 Usage
 -----
@@ -57,12 +57,12 @@ For general use with web frameworks:
 .. code:: python
 
     import httpsig
-    
+    import DEFAULT_ALGORITHM from settings
     key_id = "Some Key ID"
-    secret = open('rsa_private.pem', 'rb').read()
+    secret = "Some Secret"
     
-    hs = httpsig.HeaderSigner(key_id, secret, algorithm="hs2019", sign_algorithm=httpsig.PSS(), headers=['(request-target)', 'host', 'date'])
-    signed_headers_dict = hs.sign({"Date": "Tue, 01 Jan 2014 01:01:01 GMT", "Host": "example.com"}, method="GET", path="/api/1/object/1")
+    hs = httpsig.HeaderSigner(key_id, secret, algorithm="hs2019", sign_algorithm=DEFAULT_ALGORITHM, headers=['(request-target)', 'host', '(created)'])
+    signed_headers_dict = hs.sign({"(created)": "1392617465", "Host": "example.com"}, method="GET", path="/api/1/object/1")
 
 For use with requests:
 
@@ -85,22 +85,22 @@ Note that keys and secrets should be bytes objects.  At attempt will be made to 
 
 .. code:: python
 
-    httpsig.Signer(secret, algorithm='hs2019', sign_algorithm=httpsig.PSS())
+    httpsig.Signer(secret, algorithm='hs2019', sign_algorithm=DEFAULT_ALGORITHM)
 
 ``secret``, in the case of an RSA signature, is a string containing private RSA pem. In the case of HMAC, it is a secret password.  
 ``algorithm`` should be set to 'hs2019' the other six signatures are now deprecated: ``rsa-sha1``, ``rsa-sha256``, ``rsa-sha512``, ``hmac-sha1``, ``hmac-sha256``,
 ``hmac-sha512``.
-``sign_algorithm`` The digital signature algorithm derived from ``keyId``. Currently supported algorithms: ``httpsig.PSS``
+``sign_algorithm`` The digital signature algorithm derived from ``keyId``. Currently supported algorithms: ``hmac-sha512``
 
 
 .. code:: python
 
-    httpsig.requests_auth.HTTPSignatureAuth(key_id, secret, algorithm='hs2019', sign_algorithm=httpsig.PSS(), headers=None)
+    httpsig.requests_auth.HTTPSignatureAuth(key_id, secret, algorithm='hs2019', sign_algorithm=DEFAULT_ALGORITHM, headers=None)
 
 ``key_id`` is the label by which the server system knows your secret.
-``headers`` is the list of HTTP headers that are concatenated and used as signing objects. By default it is the specification's minimum, the ``Date`` HTTP header.  
+``headers`` is the list of HTTP headers that are concatenated and used as signing objects. By default it is the specification's minimum, the ``(created)`` HTTP header.
 ``secret`` and ``algorithm`` are as above.
-``sign_algorithm`` The digital signature algorithm derived from ``keyId``. Currently supported algorithms: ``httpsig.PSS``
+``sign_algorithm`` The digital signature algorithm derived from ``keyId``. Currently supported algorithms: ``hmac-sha512``
 
 Tests
 -----

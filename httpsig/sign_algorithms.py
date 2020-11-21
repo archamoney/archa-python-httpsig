@@ -64,3 +64,20 @@ class PSS(SignAlgorithm):
         pss = self._create_pss(public_key)
 
         return pss.verify(h, base64.b64decode(signature))
+
+
+class HMACSigned(SignAlgorithm):
+
+    def __init__(self, hash_algorithm=DEFAULT_HASH_ALGORITHM, salt_length=None, mgfunc=None):
+        if hash_algorithm not in HASHES:
+            raise HttpSigException("Unsupported hash algorithm")
+
+        if hash_algorithm != DEFAULT_HASH_ALGORITHM:
+            raise HttpSigException(
+                "Hash algorithm: {} is deprecated. Please use: {}".format(hash_algorithm, DEFAULT_HASH_ALGORITHM))
+
+    def sign(self, private_key, data):
+        pass
+
+    def verify(self, public_key, data, signature):
+        pass

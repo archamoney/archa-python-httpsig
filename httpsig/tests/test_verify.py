@@ -2,6 +2,7 @@
 import sys
 import os
 import unittest
+from datetime import datetime, timezone
 
 from httpsig.sign import HeaderSigner, Signer
 from httpsig.sign_algorithms import PSS
@@ -26,7 +27,7 @@ class BaseTestCase(unittest.TestCase):
         return param_dict
 
 
-class TestVerifyHMACSHA1(BaseTestCase):
+class TestVerifyHS2019(BaseTestCase):
     test_method = 'POST'
     test_path = '/foo?param=value&pet=dog'
     header_host = 'example.com'
@@ -40,10 +41,11 @@ class TestVerifyHMACSHA1(BaseTestCase):
         secret = b"something special goes here"
 
         self.keyId = "Test"
-        self.algorithm = "hmac-sha1"
+        self.algorithm = "hs2019"
         self.sign_secret = secret
         self.verify_secret = secret
-        self.sign_algorithm = None
+        self.sign_algorithm = 'hmac-sha512'
+        self.created = int((datetime.now(timezone.utc)).timestamp())
 
     def test_basic_sign(self):
         signer = Signer(secret=self.sign_secret, algorithm=self.algorithm, sign_algorithm=self.sign_algorithm)
@@ -59,14 +61,10 @@ class TestVerifyHMACSHA1(BaseTestCase):
         self.assertFalse(verifier._verify(data=BAD, signature=signature))
 
     def test_default(self):
-        unsigned = {
-            'Date': self.header_date
-        }
-
         hs = HeaderSigner(
             key_id="Test", secret=self.sign_secret, algorithm=self.algorithm,
             sign_header=self.sign_header, sign_algorithm=self.sign_algorithm)
-        signed = hs.sign(unsigned)
+        signed = hs.sign(None)
         hv = HeaderVerifier(
             headers=signed, secret=self.verify_secret, sign_header=self.sign_header, sign_algorithm=self.sign_algorithm)
         self.assertTrue(hv.verify())
@@ -83,7 +81,7 @@ class TestVerifyHMACSHA1(BaseTestCase):
             headers=[
                 '(request-target)',
                 'host',
-                'date',
+                '(created)',
                 'content-type',
                 'digest',
                 'content-length'
@@ -91,10 +89,10 @@ class TestVerifyHMACSHA1(BaseTestCase):
             sign_algorithm=self.sign_algorithm)
         unsigned = {
             'Host': HOST,
-            'Date': self.header_date,
             'Content-Type': self.header_content_type,
             'Digest': self.header_digest,
             'Content-Length': self.header_content_length,
+
         }
         signed = hs.sign(unsigned, method=METHOD, path=PATH)
 
@@ -188,21 +186,30 @@ class TestVerifyHMACSHA1(BaseTestCase):
         self.assertEqual(str(e.exception), 'secret cant be larger than 100000 chars')
 
 
-class TestVerifyHMACSHA256(TestVerifyHMACSHA1):
+class TestVerifyHMACSHA1(TestVerifyHS2019):
+    def setUp(self):
+        super(TestVerifyHMACSHA1, self).setUp()
+        self.algorithm = "hmac-sha1"
+        self.sign_algorithm = None
+
+
+class TestVerifyHMACSHA256(TestVerifyHS2019):
 
     def setUp(self):
         super(TestVerifyHMACSHA256, self).setUp()
         self.algorithm = "hmac-sha256"
+        self.sign_algorithm = None
 
 
-class TestVerifyHMACSHA512(TestVerifyHMACSHA1):
+class TestVerifyHMACSHA512(TestVerifyHS2019):
 
     def setUp(self):
         super(TestVerifyHMACSHA512, self).setUp()
         self.algorithm = "hmac-sha512"
+        self.sign_algorithm = None
 
 
-class TestVerifyRSASHA1(TestVerifyHMACSHA1):
+class TestVerifyRSASHA1(TestVerifyHS2019):
 
     def setUp(self):
         private_key_path = os.path.join(
@@ -229,6 +236,7 @@ class TestVerifyRSASHA256(TestVerifyRSASHA1):
     def setUp(self):
         super(TestVerifyRSASHA256, self).setUp()
         self.algorithm = "rsa-sha256"
+        self.sign_algorithm = None
 
 
 class TestVerifyRSASHA512(TestVerifyRSASHA1):
@@ -236,13 +244,14 @@ class TestVerifyRSASHA512(TestVerifyRSASHA1):
     def setUp(self):
         super(TestVerifyRSASHA512, self).setUp()
         self.algorithm = "rsa-sha512"
+        self.sign_algorithm = None
 
 
 class TestVerifyRSASHA512ChangeHeader(TestVerifyRSASHA1):
     sign_header = 'Signature'
 
 
-class TestVerifyHS2019PSS(TestVerifyHMACSHA1):
+class TestVerifyHS2019PSS(TestVerifyHS2019):
 
     def setUp(self):
         private_key_path = os.path.join(os.path.dirname(__file__), 'rsa_private_2048.pem')

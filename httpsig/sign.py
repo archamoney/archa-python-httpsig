@@ -1,11 +1,12 @@
 from __future__ import print_function
-import base64
-import six
+
+from datetime import datetime, timezone
 
 from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
-from .sign_algorithms import SignAlgorithm
+
+from .sign_algorithms import SignAlgorithm, HMACSigned
 from .utils import *
 
 DEFAULT_ALGORITHM = "hs2019"
@@ -24,8 +25,11 @@ class Signer(object):
             algorithm = DEFAULT_ALGORITHM
 
         assert algorithm in ALGORITHMS, "Unknown algorithm"
-
-        if sign_algorithm is not None and not issubclass(type(sign_algorithm), SignAlgorithm):
+        # TODO this needs to updated if the we are moving the logic to sign and verify methods to SignAlgorithm
+        check_sign_algorithm = sign_algorithm
+        if isinstance(check_sign_algorithm, str) and '-' in check_sign_algorithm and 'hmac' in check_sign_algorithm:
+            check_sign_algorithm = HMACSigned()
+        if sign_algorithm is not None and not issubclass(type(check_sign_algorithm), SignAlgorithm):
             raise HttpSigException("Unsupported digital signature algorithm")
 
         if algorithm != DEFAULT_ALGORITHM:
@@ -40,12 +44,14 @@ class Signer(object):
         self._hash = None
         self.algorithm = algorithm
         self.secret = secret
-
-        if "-" in algorithm:
+        if isinstance(algorithm, str) and "-" in algorithm:
             self.sign_algorithm, self.hash_algorithm = algorithm.split('-')
         elif algorithm == "hs2019":
             assert sign_algorithm is not None, "Required digital signature algorithm not specified"
-            self.sign_algorithm = sign_algorithm
+            if isinstance(sign_algorithm, str) and "-" in sign_algorithm:
+                self.sign_algorithm, self.hash_algorithm = sign_algorithm.split('-')
+            else:
+                self.sign_algorithm = sign_algorithm
 
         if self.sign_algorithm == 'rsa':
             try:
@@ -120,14 +126,13 @@ class HeaderSigner(Signer):
 
         if len(secret) > 100000:
             raise ValueError("secret cant be larger than 100000 chars")
-
         super(HeaderSigner, self).__init__(secret=secret, algorithm=algorithm, sign_algorithm=sign_algorithm)
-        self.headers = headers or ['date']
+        self.headers = headers or [DEFAULT_HEADER]
         self.signature_template = build_signature_template(
-            key_id, algorithm, headers, sign_header)
+            key_id, algorithm, self.headers, sign_header)
         self.sign_header = sign_header
 
-    def sign(self, headers, host=None, method=None, path=None):
+    def sign(self, headers, host=None, method=None, path=None, created=None):
         """
         Add Signature Authorization header to case-insensitive header dict.
 
@@ -136,13 +141,19 @@ class HeaderSigner(Signer):
             headers).
         `method` is the HTTP method (required when using '(request-target)').
         `path` is the HTTP path (required when using '(request-target)').
+        `created` is a DateTime (required when using '(created)'). (Defaults to now())
         """
         headers = CaseInsensitiveDict(headers)
-        required_headers = self.headers or ['date']
+
+        required_headers = self.headers or [DEFAULT_HEADER]
+        timestamp = created
+        if timestamp is None:
+            timestamp = int(datetime.now(timezone.utc).timestamp())
         signable = generate_message(
-            required_headers, headers, host, method, path)
+            required_headers, headers, host, method, path, created=timestamp)
 
         signature = super(HeaderSigner, self).sign(signable)
-        headers[self.sign_header] = self.signature_template % signature
+
+        headers[self.sign_header] = self.signature_template.format(signature=signature, created=timestamp)
 
         return headers
