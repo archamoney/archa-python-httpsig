@@ -4,7 +4,8 @@ Module to assist in verifying a signed header.
 import base64
 import six
 
-from .sign import Signer
+from .sign import Signer, DEFAULT_ALGORITHM
+from .sign_algorithms import SignAlgorithm
 from .utils import *
 
 
@@ -37,6 +38,9 @@ class Verifier(Signer):
             s = base64.b64decode(signature)
             return ct_bytes_compare(h, s)
 
+        elif issubclass(type(self.sign_algorithm), SignAlgorithm):
+            return self.sign_algorithm.verify(self.secret, data, signature)
+
         else:
             raise HttpSigException("Unsupported algorithm.")
 
@@ -47,7 +51,7 @@ class HeaderVerifier(Verifier):
     """
 
     def __init__(self, headers, secret, required_headers=None, method=None,
-                 path=None, host=None, sign_header='authorization'):
+                 path=None, host=None, sign_header='authorization', algorithm=None, sign_algorithm=None):
         """
         Instantiate a HeaderVerifier object.
 
@@ -66,7 +70,16 @@ class HeaderVerifier(Verifier):
             header, if not supplied in :param:headers.
         :param sign_header:         Optional. The header where the signature is.
             Default is 'authorization'.
+        :param algorithm:           Algorithm derived from keyId (required for draft version >= 12)
+        :param sign_algorithm:      Required for 'hs2019' algorithm, specifies the
+                                    digital signature algorithm (derived from keyId) to use.
         """
+        if not secret:
+            raise ValueError("secret cant be empty")
+
+        if len(secret) > 100000:
+            raise ValueError("secret cant be larger than 100000 chars")
+
         required_headers = required_headers or ['date']
         self.headers = CaseInsensitiveDict(headers)
 
@@ -83,9 +96,10 @@ class HeaderVerifier(Verifier):
         self.method = method
         self.path = path
         self.host = host
+        self.derived_algorithm = algorithm
 
         super(HeaderVerifier, self).__init__(
-                secret, algorithm=self.auth_dict['algorithm'])
+            secret, algorithm=self.auth_dict['algorithm'], sign_algorithm=sign_algorithm)
 
     def verify(self):
         """
@@ -96,12 +110,17 @@ class HeaderVerifier(Verifier):
             not found in the signature.
         Returns True or False.
         """
+        if 'algorithm' in self.auth_dict and self.derived_algorithm is not None and self.auth_dict['algorithm'] != self.derived_algorithm:
+            print("Algorithm mismatch, signature parameter algorithm was: {}, but algorithm derived from key is: {}".format(
+                    self.auth_dict['algorithm'], self.derived_algorithm))
+            return False
+
         auth_headers = self.auth_dict.get('headers', 'date').split(' ')
 
         if len(set(self.required_headers) - set(auth_headers)) > 0:
             error_headers = ', '.join(
                     set(self.required_headers) - set(auth_headers))
-            raise Exception(
+            raise ValueError(
                     '{} is a required header(s)'.format(error_headers))
 
         signing_str = generate_message(
