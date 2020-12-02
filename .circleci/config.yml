@@ -1,0 +1,37 @@
+workflows:
+  version: 2.1
+  build-with-approval:
+    jobs:
+      - hold:
+          type: approval
+      - build:
+          requires:
+            - hold
+
+version: 2.1
+jobs:
+  build:
+    working_directory: ~/circle-ci-test
+    docker:
+      - image: circleci/python:3.8.2
+        environment:
+          PIPENV_VENV_IN_PROJECT: true
+    steps:
+      - checkout
+
+      # TODO: Implement caching
+
+      # Run tests first of all (if this fails we won't go to the effort of running full tox tests)
+      - run: python setup.py test
+
+      # Install pyenv for tox tests
+      - run: sudo curl https://pyenv.run | bash
+      - run: echo 'export PATH="/home/circleci/.pyenv/bin:$PATH"' >> $BASH_ENV
+      - run: pyenv install 3.7.5
+      - run: pyenv install 3.8.2
+      - run: pyenv global 3.8.2 3.7.5
+
+      # Setup and run tox tests
+      - run: sudo pip install --upgrade pip
+      - run: pip install tox
+      - run: tox

@@ -4,6 +4,8 @@ import re
 import struct
 import hashlib
 
+from httpsig.settings import DEFAULT_HEADER
+
 try:
     # Python 3
     from urllib.request import parse_http_list
@@ -14,14 +16,14 @@ except ImportError:
 from Crypto.Hash import SHA, SHA256, SHA512
 
 ALGORITHMS = frozenset([
-                'rsa-sha1',
-                'rsa-sha256',
-                'rsa-sha512',
-                'hmac-sha1',
-                'hmac-sha256',
-                'hmac-sha512',
-                'hs2019'])
-HASHES = {'sha1':   SHA,
+    'rsa-sha1',
+    'rsa-sha256',
+    'rsa-sha512',
+    'hmac-sha1',
+    'hmac-sha256',
+    'hmac-sha512',
+    'hs2019'])
+HASHES = {'sha1': SHA,
           'sha256': SHA256,
           'sha512': SHA512}
 
@@ -54,11 +56,11 @@ def ct_bytes_compare(a, b):
 
 
 def generate_message(required_headers, headers, host=None, method=None,
-                     path=None):
+                     path=None, created=None):
     headers = CaseInsensitiveDict(headers)
 
     if not required_headers:
-        required_headers = ['date']
+        required_headers = DEFAULT_HEADER
 
     signable_list = []
     for h in required_headers:
@@ -66,9 +68,13 @@ def generate_message(required_headers, headers, host=None, method=None,
         if h == '(request-target)':
             if not method or not path:
                 raise ValueError('method and path arguments required when ' +
-                                'using "(request-target)"')
+                                 'using "(request-target)"')
             signable_list.append('%s: %s %s' % (h, method.lower(), path))
-
+        elif h == '(created)':
+            if not created:
+                raise ValueError('created argument required when ' +
+                                 'using "(created)"')
+            signable_list.append('%s: %s' % (h, created))
         elif h == 'host':
             # 'host' special case due to requests lib restrictions
             # 'host' is not available when adding auth so must use a param
@@ -139,13 +145,23 @@ def build_signature_template(key_id, algorithm, headers, sign_header='authorizat
 
     The signature must be interpolated into the template to get the final
     Authorization header value.
+
+    Fields for interpolation are:
+        {signature} - the request signature
+        {created} - the request created time
     """
     param_map = {'keyId': key_id,
                  'algorithm': algorithm,
-                 'signature': '%s'}
+                 'signature': '{signature}'}
     if headers:
         headers = [h.lower() for h in headers]
         param_map['headers'] = ' '.join(headers)
+
+        # If our list of required headers includes the (created) pseudoheader, then include this
+        # (via string interpolation)
+        if '(created)' in headers:
+            param_map['created'] = '{created}'
+
     kv = map('{0[0]}="{0[1]}"'.format, param_map.items())
     kv_string = ','.join(kv)
     if sign_header.lower() == 'authorization':
@@ -157,10 +173,10 @@ def build_signature_template(key_id, algorithm, headers, sign_header='authorizat
 def lkv(d):
     parts = []
     while d:
-            length = struct.unpack('>I', d[:4])[0]
-            bits = d[4:length+4]
-            parts.append(bits)
-            d = d[length+4:]
+        length = struct.unpack('>I', d[:4])[0]
+        bits = d[4:length + 4]
+        parts.append(bits)
+        d = d[length + 4:]
     return parts
 
 
@@ -179,6 +195,7 @@ class CaseInsensitiveDict(dict):
         multiple instances of the same header. If that is changed
         then we suddenly care about the assembly rules in sec 2.3.
     """
+
     def __init__(self, d=None, **kwargs):
         super(CaseInsensitiveDict, self).__init__(**kwargs)
         if d:
@@ -211,4 +228,4 @@ def get_fingerprint(key):
     key = key.strip().encode('ascii')
     key = base64.b64decode(key)
     fp_plain = hashlib.md5(key).hexdigest()
-    return ':'.join(a+b for a, b in zip(fp_plain[::2], fp_plain[1::2]))
+    return ':'.join(a + b for a, b in zip(fp_plain[::2], fp_plain[1::2]))
