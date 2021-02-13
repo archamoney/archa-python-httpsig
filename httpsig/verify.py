@@ -3,10 +3,13 @@ Module to assist in verifying a signed header.
 """
 import base64
 import six
+import logging
 
 from .sign import Signer, DEFAULT_ALGORITHM
 from .sign_algorithms import SignAlgorithm
 from .utils import *
+
+logger = logging.getLogger(__name__)
 
 
 class Verifier(Signer):
@@ -128,5 +131,8 @@ class HeaderVerifier(Verifier):
 
         signing_str = generate_message(
             auth_headers, self.headers, self.host, self.method, self.path, created=created)
+
+        logger.error(f'Signing string: {signing_str}')
+        logger.error(f'Signature: {self.auth_dict["signature"]}')
 
         return self._verify(signing_str, self.auth_dict['signature'])
