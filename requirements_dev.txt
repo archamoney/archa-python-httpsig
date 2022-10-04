@@ -1,2 +1,2 @@
-setuptools
+setuptools==60.8.1
 wheel
