@@ -1,26 +1,13 @@
-workflows:
-  version: 2.1
-  build-with-approval:
-    jobs:
-      - hold:
-          type: approval
-      - build:
-          requires:
-            - hold
-
 version: 2.1
+
 jobs:
-  build:
-    working_directory: ~/circle-ci-test
+  build-and-test:
     docker:
-      - image: circleci/python:3.8.2
+      - image: circleci/python:3.8.10
         environment:
           PIPENV_VENV_IN_PROJECT: true
     steps:
       - checkout
-
-      # TODO: Implement caching
-
       # Run tests first of all (if this fails we won't go to the effort of running full tox tests)
       - run: python setup.py test
 
@@ -35,3 +22,9 @@ jobs:
       - run: sudo pip install --upgrade pip
       - run: pip install tox
       - run: tox
+
+workflows:
+  branch-build:
+    jobs:
+      - build-and-test:
+          context: development
