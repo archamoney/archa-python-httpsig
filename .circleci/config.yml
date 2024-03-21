@@ -13,7 +13,7 @@ jobs:
   build:
     working_directory: ~/circle-ci-test
     docker:
-      - image: circleci/python:3.8.10
+      - image: cimg/base:current
         environment:
           PIPENV_VENV_IN_PROJECT: true
     steps:
@@ -21,17 +21,23 @@ jobs:
 
       # TODO: Implement caching
 
-      # Install pyenv for tox tests
-      - run: sudo curl https://pyenv.run | bash
-      - run: echo 'export PATH="/home/circleci/.pyenv/bin:$PATH"' >> $BASH_ENV
-      - run: pyenv install 3.8.10
-      - run: pyenv install 3.9.18
-      - run: pyenv install 3.10.6
-      - run: pyenv install 3.11.3
-      - run: pyenv install 3.12.1
-      - run: pyenv global 3.8.10 3.9.18 3.10.6 3.11.3 3.12.1
-
-      # Setup and run tox tests
-      - run: sudo pip install --upgrade pip
-      - run: pip install tox
-      - run: tox
+      - run:
+          name: 'Setup and run tox tests'
+          command: |
+            sudo curl https://pyenv.run | bash
+            export PYENV_ROOT="$HOME/.pyenv"
+            export PATH="$PYENV_ROOT/bin:$PATH"
+            eval "$(pyenv init -)"
+            eval "$(pyenv virtualenv-init -)"
+            sudo apt update; sudo apt install build-essential libssl-dev zlib1g-dev \
+              libbz2-dev libreadline-dev libsqlite3-dev curl \
+              libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+            pyenv install 3.8.10
+            pyenv install 3.9.18
+            pyenv install 3.10.6
+            pyenv install 3.11.3
+            pyenv install 3.12.1
+            pyenv global 3.8.10 3.9.18 3.10.6 3.11.3 3.12.1
+            pip install --upgrade pip
+            pip install tox
+            tox
