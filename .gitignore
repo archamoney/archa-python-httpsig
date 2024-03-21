@@ -13,3 +13,4 @@ locale/
 pip-log.txt
 /.idea
 /.eggs
+.python-version

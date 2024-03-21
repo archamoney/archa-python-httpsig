@@ -221,7 +221,7 @@ def get_fingerprint(key):
     if key.startswith('ssh-rsa'):
         key = key.split(' ')[1]
     else:
-        regex = r'\-{4,5}[\w|| ]+\-{4,5}'
+        regex = r'\-{4,5}[\w| ]+\-{4,5}'
         key = re.split(regex, key)[1]
 
     key = key.replace('\n', '')
