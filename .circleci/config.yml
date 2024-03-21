@@ -1,17 +1,7 @@
-workflows:
-  version: 2.1
-  build-with-approval:
-    jobs:
-      - hold:
-          type: approval
-      - build:
-          requires:
-            - hold
-
 version: 2.1
+
 jobs:
-  build:
-    working_directory: ~/circle-ci-test
+  build-and-test:
     docker:
       - image: cimg/base:current
         environment:
@@ -41,3 +31,9 @@ jobs:
             pip install --upgrade pip
             pip install tox
             tox
+
+workflows:
+  branch-build:
+    jobs:
+      - build-and-test:
+          context: development
