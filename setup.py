@@ -37,5 +37,7 @@ setup(
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
     install_requires=['pycryptodome>=3,<4', 'six'],
+    # Only support Python versions in testing matrix
+    python_requires='>=3.8,<3.13',
     test_suite="httpsig.tests",
 )
